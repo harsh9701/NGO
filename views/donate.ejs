@@ -1,0 +1,78 @@
+<%- include('layouts/header') %>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Make a Donation</h2>
+                    <form id="donation-form">
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Donation Amount (USD)</label>
+                            <select class="form-select" id="amount" name="amount" required>
+                                <option value="10">$10</option>
+                                <option value="25">$25</option>
+                                <option value="50">$50</option>
+                                <option value="100">$100</option>
+                                <option value="custom">Custom Amount</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 custom-amount-input d-none">
+                            <label for="custom-amount" class="form-label">Enter Custom Amount</label>
+                            <input type="number" class="form-control" id="custom-amount" min="1">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Donate Now</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const stripe = Stripe('YOUR_STRIPE_PUBLIC_KEY');
+
+document.getElementById('amount').addEventListener('change', function() {
+    const customAmountDiv = document.querySelector('.custom-amount-input');
+    if (this.value === 'custom') {
+        customAmountDiv.classList.remove('d-none');
+    } else {
+        customAmountDiv.classList.add('d-none');
+    }
+});
+
+document.getElementById('donation-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const amountSelect = document.getElementById('amount');
+    let amount = amountSelect.value;
+    
+    if (amount === 'custom') {
+        amount = document.getElementById('custom-amount').value;
+    }
+
+    try {
+        const response = await fetch('/process-donation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ amount: parseInt(amount) }),
+        });
+
+        const session = await response.json();
+        const result = await stripe.redirectToCheckout({
+            sessionId: session.id,
+        });
+
+        if (result.error) {
+            alert(result.error.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again.');
+    }
+});
+</script>
+
+<%- include('layouts/footer') %>
